@@ -1,4 +1,4 @@
-# Raspberry Pi 5 - Google Coral Edge TPU installation guide
+# Raspberry Pi 5 - Google Coral Edge M.2 TPU installation guide
 
 To get started with either the Mini PCIe or M.2 Accelerator, all you need to do is connect the card to your system, and then install our PCIe driver, Edge TPU runtime, and the TensorFlow Lite runtime. This page walks you through the setup and shows you how to run an example model.
 
