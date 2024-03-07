@@ -1,4 +1,4 @@
-# Raspberry Pi 5 - Google Coral Edge M.2 TPU installation guide
+# [Raspberry Pi 5 - Google Coral Edge M.2 TPU installation guide](https://gist.github.com/Reddimus/c6948d08a4f4b54ee9d075270bd79c3b)
 
 To get started with either the Mini PCIe or M.2 Accelerator, all you need to do is connect the card to your system, and then install our PCIe driver, Edge TPU runtime, and the TensorFlow Lite runtime. This page walks you through the setup and shows you how to run an example model.
 
@@ -17,24 +17,6 @@ The setup and operation is the same for both M.2 form-factors, including the M.2
 
 1. Make sure the host system where you'll connect the module is shut down.
 2. Carefully connect the M.2 module to the corresponding module slot on the host, according to your host system recommendations. We recommend the [PineBerry AI Hat (E-Key) for the Raspberry Pi 5](https://pineberrypi.com/products/hat-ai-for-raspberry-pi-5).
-3. Updating your Pi:
-    The boards we currently ship to customers support HAT+ power management for PCIe devices. If the power LED on your Pineberry Pi board does not light up when you connect it for the first time you need to update your firmware. Execute following commands in your Raspberry Pi OS terminal:
-    ```bash
-    sudo apt-get update && sudo apt-get upgrade
-    ```
-4. Enabling the PCIe interface:  
-    Edit the available boot config file 
-    ```bash
-    sudo nano /boot/firmware/config.txt
-    ```
-    Within the config file add the following lines to the bottom of the file:
-    ```bash
-    # Enable the PCIe external connector
-    dtparam=pciex1
-    # Force Gen 3.0 speeds
-    dtparam=pciex1_gen=3
-    ```
-    Save it, and reboot  
 
 ## 2: Install the PCIe driver and Edge TPU runtime
 
@@ -44,44 +26,17 @@ The Coral ("Apex") PCIe driver is required to communicate with any Edge TPU devi
 
 ---
 
-Before you install the PCIe driver on Linux, you first need to check whether you have a pre-built version of the driver installed. (Older versions of the driver have a bug that prevents updates and will result in failure when calling upon the Edge TPU.) So first follow these steps:
-
-1. Check your Linux kernel version with this command:
+1. Run [@dataslayermedia 's script](https://gist.github.com/dataslayermedia/714ec5a9601249d9ee754919dea49c7e) to install the edge TPU's runtime, Gasket driver, edit boot configuration, and Modify the Device Tree Source.
     ```bash
-    uname -r
+    curl https://gist.githubusercontent.com/dataslayermedia/714ec5a9601249d9ee754919dea49c7e/raw/52545bb7b3a961290a4d7c5042d3fd6eb7bc33d2/coral-ai-pcie-edge-tpu-raspberrypi-5-setup | sh
     ```
-    If it prints 4.18 or lower, you should be okay and can skip to begin installing our PCIe driver.
-2. If your kernel version is 4.19 or higher, now check if you have a pre-build Apex driver installed:
+
+    If [@dataslayermedia 's script](https://gist.github.com/dataslayermedia/714ec5a9601249d9ee754919dea49c7e) is no longer available please use the following fork:
     ```bash
-    lsmod | grep apex
+    curl https://gist.githubusercontent.com/Reddimus/c6948d08a4f4b54ee9d075270bd79c3b/raw/52545bb7b3a961290a4d7c5042d3fd6eb7bc33d2/coral-ai-pcie-edge-tpu-raspberrypi-5-setup | sh
     ```
-    If it prints nothing, then you're okay and continue to install our PCIe driver.  
-    If it does print an Apex module name, stop here and follow the workaround to disable Apex and Gasket.
 
-Now install the PCIe driver and runtime as follows:
-
-1. First, add our Debian package repository to your system (be sure you have an internet connection):
-    ```bash
-    echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-
-    sudo apt-get update
-    ```
-2. Then install the PCIe driver and Edge TPU runtime packages:
-    ```bash
-    sudo apt-get install gasket-dkms libedgetpu1-std
-    ```
-3. If the user account you'll be using does not have root permissions, you might need to also add the following udev rule, and then verify that the "apex" group exists and that your user is added to it:
-    ```bash
-    sudo sh -c "echo 'SUBSYSTEM==\"apex\", MODE=\"0660\", GROUP=\"apex\"' >> /etc/udev/rules.d/65-apex.rules"
-
-    sudo groupadd apex
-
-    sudo adduser $USER apex
-    ```
-4. Now reboot the system.
-5. Once rebooted, verify that the accelerator module is detected:  
+2. Once rebooted, verify that the accelerator module is detected:  
     ```bash
     lspci -nn | grep 089a
     ```
@@ -90,7 +45,8 @@ Now install the PCIe driver and runtime as follows:
     03:00.0 System peripheral: Device 1ac1:089a
     ```
     The `03` number and `System peripheral` name might be different, because those are host-system specific, but as long as you see a device listed with `089a` then you're okay to proceed.
-6. Also verify that the PCIe driver is loaded:
+
+3. Also verify that the PCIe driver is loaded:
     ```bash
     ls /dev/apex_0
     ```
@@ -100,13 +56,13 @@ Now install the PCIe driver and runtime as follows:
     ```
     If the accelerator module is detected but `/dev/apex_0` is not found, then [read the troubleshooting section at the end of this guide](#pcie-devapex_0-driver-not-loaded).
 
-7. Give permissions to the `/dev/apex_0` device by creating a new `udev` rule:  
+4. Give permissions to the `/dev/apex_0` device by creating a new `udev` rule:  
     Open a terminal and use your favorite text editor with sudo to create a new file in /etc/udev/rules.d/. The file name should end with .rules. It's common practice to start custom rules with a higher number (e.g., 99-) to ensure they are applied after the default rules.
     For example:
     ```bash
     sudo nano /etc/udev/rules.d/99-coral-edgetpu.rules
     ```
-8. Add a rule to the file:  
+5. Add a rule to the file:  
     You'll need to identify your device by attributes like `idVendor` and `idProduct` or use the `KERNEL` attribute if the device path is consistent. For the Coral Edge TPU, using the device path `/dev/apex_0` directly in a `udev` rule is not standard because this path might not be persistent across reboots or other device changes. Instead, use attributes to match the device.
 
     However, since we're dealing with a specific device path here, your rule might look something like this, assuming `/dev/apex_0` is consistently named and you're setting permissions:
@@ -114,17 +70,28 @@ Now install the PCIe driver and runtime as follows:
     KERNEL=="apex_0", MODE="0666"
     ```
     This rule sets the device file `/dev/apex_0` to be readable and writable by everyone. Adjust the `MODE` as necessary for your security requirements.
-9. Reload the `udev` rules and trigger them:
+6. Reload the `udev` rules and trigger them:
     After saving the file, you need to reload the `udev` rules and trigger them to apply the changes without rebooting.
     Reload the rules:
     ```bash
     sudo udevadm control --reload-rules
     sudo udevadm trigger
     ```
-10. Verify:  
-    Reboot your system to verify that the permissions for `/dev/apex_0` are set as expected. After rebooting, check the permissions of the device file:
+7. Verify `/dev/apex_0` and `MSI-X` are enabled:  
+    Verify that the permissions for `/dev/apex_0` are set as expected. After rebooting, check the permissions of the device file:
     ```bash
     ls -l /dev/apex_0
+    ```
+
+    Also verify all Message Signaled Interrupts (`MSI`) are enabled:
+    ```bash
+    sudo lspci -vvv|grep -i MSI-X
+    ```
+
+    You should see something like this, where `+` indicates that MSI-X is enabled and `-` indicates that it's disabled:
+    ```bash
+    Capabilities: [d0] MSI-X: Enable+ Count=128 Masked-
+    Capabilities: [b0] MSI-X: Enable+ Count=61 Masked-
     ```
 
     Note: The use of MODE="0666" makes the device world-readable and writable, which may not be secure for all environments. Consider your security requirements and adjust the permissions accordingly, possibly using GROUP to restrict access to users within a specific group.
@@ -360,12 +327,16 @@ The error messages from `modprobe` indicate that the `gasket` and `apex` modules
     ```
     This command will list all DKMS modules and their status. You're looking for gasket and apex to be listed as installed for your kernel version.
 
-All done you should roughly see the following output:
-```bash
-Deprecated feature: REMAKE_INITRD (/var/lib/dkms/gasket/1.0/source/dkms.conf)
-Deprecated feature: REMAKE_INITRD (/var/lib/dkms/gasket/1.0/source/dkms.conf)
-gasket/1.0, 6.1.0-rpi8-rpi-2712, aarch64: installed
-gasket/1.0, 6.1.0-rpi8-rpi-v8, aarch64: installed
-```
+    You should roughly see the following output:
+    ```bash
+    Deprecated feature: REMAKE_INITRD (/var/lib/dkms/gasket/1.0/source/dkms.conf)
+    Deprecated feature: REMAKE_INITRD (/var/lib/dkms/gasket/1.0/source/dkms.conf)
+    gasket/1.0, 6.1.0-rpi8-rpi-2712, aarch64: installed
+    gasket/1.0, 6.1.0-rpi8-rpi-v8, aarch64: installed
+    ```
+3. Reboot
+    ```bash
+    sudo reboot
+    ```
 
 You can now continue with the rest of the steps to [install the PCIe driver](#2-install-the-pcie-driver-and-edge-tpu-runtime).
