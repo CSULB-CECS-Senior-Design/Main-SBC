@@ -1,17 +1,3 @@
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 A demo which runs object detection on camera frames using GStreamer.
 It also provides support for Object Tracker.
@@ -144,24 +130,28 @@ def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
     return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
 
+class PositionSide:
+    LEFT = False
+    RIGHT = True
+
+
 class Movements:
     def __init__(self):
-        # `l` means last seen center position was left, `r` means right
-        self.last_human_position = ''
+        self.last_human_position = PositionSide.LEFT    # Default
 
-    def get_obj_xposition(self, obj: Object) -> str:
-        """Returns the position of the object in the camera view.
+    def get_obj_xside(self, obj: Object) -> PositionSide:
+        """Returns the position side of the object in the camera view.
         Args:
             obj (BBox Object): The object detected in the camera view.
         Returns:
-            str: 'l' if object is on the left side, 'r' if object is on the right side.
+            PositionSide: The side of the object in the camera view; LEFT or RIGHT.
         """
         xcenter = (obj.bbox.xmin + obj.bbox.xmax) / 2
-        return 'l' if xcenter < 0.5 else 'r'
+        return PositionSide.LEFT if xcenter < 0.5 else PositionSide.RIGHT
 
     def face_last_human_position(self):
         """Pivots in the direction of the last seen human position."""
-        if self.last_human_position == 'l':
+        if self.last_human_position == PositionSide.LEFT:
             print("Last seen human position was left")
             # pivot_left()
         else:
@@ -256,7 +246,8 @@ class Movements:
                 self.follow_human(closest_human)
 
         # Cache last seen human position
-        self.last_human_position = self.get_obj_xposition(closest_human)
+        self.last_human_position = self.get_obj_xside(closest_human)
+
 
 def main():
     default_model_dir = '../models'
