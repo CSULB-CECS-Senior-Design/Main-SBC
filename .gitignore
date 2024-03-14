@@ -1,0 +1,3 @@
+gstreamer/__pycache__/
+models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite
+third_party/
