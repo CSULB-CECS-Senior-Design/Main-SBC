@@ -99,7 +99,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
                              fill='none', stroke='red', stroke_width='2'))
     else:
         for obj in objs:
-            x0, y0, x1, y1, a, xc, yc = list(obj.bbox)
+            x0, y0, x1, y1, a = list(obj.bbox)
             # Relative coordinates.
             x, y, w, h = x0, y0, x1 - x0, y1 - y0
             # Absolute coordinates, input tensor space.
@@ -117,7 +117,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
     return dwg.tostring()
 
 
-class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax', 'area', 'xcenter', 'ycenter'])):
+class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax', 'area'])):
     """Bounding box.
     Represents a rectangle which sides are either vertical or horizontal, parallel
     to the x or y axis.
@@ -140,57 +140,123 @@ def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
                       ymin=np.maximum(0.0, ymin),
                       xmax=np.minimum(1.0, xmax),
                       ymax=np.minimum(1.0, ymax),
-                      area=(xmax - xmin) * (ymax - ymin),
-                      xcenter=(xmin + xmax) / 2,
-                      ycenter=(ymin + ymax) / 2))
+                      area=(xmax - xmin) * (ymax - ymin)))
     return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
-def follow_human(objs) -> None:
-    closest_human, closest_obj = None, None
-    closest_human_area, closest_obj_area = 0, 0
-    for obj in objs:
-        # If the object is a human, keep track of the closest human
-        if obj.id == 0 and obj.score > 0.5 and obj.bbox.area > closest_human_area:
-            closest_human_area = obj.bbox.area
-            closest_human = obj
-        # Keep track of the closest object
-        if obj.score > 0.5 and obj.bbox.area > closest_obj_area:
-            closest_obj_area = obj.bbox.area
-            closest_obj = obj
 
-    # TODO: Implement logic if object is to close xmin and xmax is too close to the edge
+class Movements:
+    def __init__(self):
+        # `l` means last seen center position was left, `r` means right
+        self.last_human_position = ''
 
-    if closest_human == closest_obj and closest_human is not None:
-        print("Closest object is a human")
+    def get_obj_xposition(self, obj: Object) -> str:
+        """Returns the position of the object in the camera view.
+        Args:
+            obj (BBox Object): The object detected in the camera view.
+        Returns:
+            str: 'l' if object is on the left side, 'r' if object is on the right side.
+        """
+        xcenter = (obj.bbox.xmin + obj.bbox.xmax) / 2
+        return 'l' if xcenter < 0.5 else 'r'
 
-        print(f"Centering on human with area {closest_human_area}")
-        # Xmin must be on the left side of the video feed and Xmax must be on the right side
-        if closest_human.bbox.xmin < 0.5 and closest_human.bbox.xmax > 0.5:
+    def face_last_human_position(self):
+        """Pivots in the direction of the last seen human position."""
+        if self.last_human_position == 'l':
+            print("Last seen human position was left")
+            # pivot_left()
+        else:
+            print("Last seen human position was right")
+            # pivot_right()
+
+    def find_closest_objs(self, objs: list[Object], min_certainty: float = 0.5) -> tuple:
+        """Finds the closest human and object in the camera view.
+        Args:
+            min_certainty (float, optional): The minimum certainty required for an object to be considered. Defaults to 0.5.
+        Returns:
+            tuple: (closest_human, closest_obj)
+        """
+        objs = [obj for obj in objs if obj.score > min_certainty]
+
+        closest_human, closest_obj = None, None
+        closest_human_area, closest_obj_area = 0, 0
+        for obj in objs:
+            # If object detected is outside of camera view increase area
+            if obj.bbox.ymin < 0.1 and 0.9 < obj.bbox.ymax:
+                obj.bbox.area *= 1.1
+            # Update closest human
+            if obj.id == 0 and obj.bbox.area > closest_human_area:
+                closest_human = obj
+                closest_human_area = obj.bbox.area
+            # Update closest object
+            if obj.bbox.area > closest_obj_area:
+                closest_obj = obj
+                closest_obj_area = obj.bbox.area
+
+        return (closest_human, closest_obj)
+
+    def is_too_close(self, obj, threshold=0.2) -> bool:
+        """Checks if the given object is too close to the camera.
+        Args:
+            obj (BBox Object): The object detected in the camera view.
+            threshold (float, optional): The threshold for closeness. Defaults to 0.2.
+        Returns:
+            bool: True if object is too close to the camera, False otherwise.
+        """
+        return obj.bbox.xmin < threshold and 1 - threshold < obj.bbox.xmax
+
+    def follow_human(self, human) -> None:
+        """Follows the given human in the camera view.
+        Args:
+            human (BBox Object): The human detected in the camera view.
+        """
+        # if human is centered in camera view
+        if human.bbox.xmin < 0.5 and 0.5 < human.bbox.xmax:
             print("Human is centered")
             # move_forward()
-        elif closest_human.bbox.xmax < 0.5:
+        # Else if human is on left side of midpoint
+        elif human.bbox.xmax < 0.5:
             print("Human is to the left of the center")
             # move_left()
-        elif closest_human.bbox.xmin > 0.5:
+        # Else human is on right side of midpoint
+        elif human.bbox.xmin > 0.5:
             print("Human is to the right of the center")
             # move_right()
-    elif closest_obj is not None:
-        print(f"Closest object is not a human. Object ID: {closest_obj.id}")
 
-        print("Avoiding foreign object")
+    def find_human(self, objs: list[Object]) -> None:
+        """Finds the closest human and object in the camera view. Then moves towards the human.
+        Args:
+            objs (list[Object]): The Bounding Box objects detected in the camera view.
+        """
+        closest_human, closest_obj = self.find_closest_objs(objs)
 
-        if closest_obj.bbox.xmin < 0.5 and closest_obj.bbox.xmax > 0.5:
-            print("Object is centered")
-            xmin_dist, xmax_dist = abs(closest_obj.bbox.xmin - 0.5), abs(closest_obj.bbox.xmax - 0.5)
-            # If object is closer to the right side
-            if xmin_dist < xmax_dist:
-                print("Object is closer to right side")
-                # move_left()
-            else:
-                print("Object is closer to left side")
-                # move_right()
-    else:
-        print("No objects detected")
+        # If no human is detected
+        if not closest_human:
+            print("No humans detected")
+            # Pivot in directions of last seen human position
+            self.face_last_human_position()
+            return
+
+        # If human is the closest object
+        if closest_human == closest_obj:
+            print("Closest object is a human")
+            # print(f"Centering on human with area {closest_human.bbox.area}")
+            # If human is not too close to the camera
+            if not self.is_too_close(closest_human):
+                self.follow_human(closest_human)
+            # Else goal met; stop moving
+        # Else closest object is not a human
+        else:
+            print(f"Closest object is not a human. Object ID: {closest_obj.id}")
+            # print("Avoiding foreign object")
+
+            if self.is_too_close(closest_obj):
+                print("Object is too close to the camera")
+                self.face_last_human_position()
+            else:  # steer into nearest human
+                self.follow_human(closest_human)
+
+        # Cache last seen human position
+        self.last_human_position = self.get_obj_xposition(closest_human)
 
 def main():
     default_model_dir = '../models'
@@ -224,6 +290,7 @@ def main():
     inference_size = (w, h)
     # Average fps over last 30 frames.
     fps_counter = common.avg_fps_counter(30)
+    moves = Movements()
 
     def user_callback(input_tensor, src_size, inference_box, mot_tracker):
         nonlocal fps_counter
@@ -232,7 +299,7 @@ def main():
         interpreter.invoke()
         # For larger input image sizes, use the edgetpu.classification.engine for better performance
         objs = get_output(interpreter, args.threshold, args.top_k)
-        follow_human(objs)
+        moves.find_human(objs)
         end_time = time.monotonic()
         detections = []  # np.array([])
         for n in range(0, len(objs)):
@@ -241,10 +308,10 @@ def main():
             element.append(objs[n].bbox.ymin)
             element.append(objs[n].bbox.xmax)
             element.append(objs[n].bbox.ymax)
-            print(f"Object[{n}]: label={labels[objs[n].id]}, score={objs[n].score}, area={objs[n].bbox.area}, center=({objs[n].bbox.xcenter},{objs[n].bbox.ycenter})")
-                #   xmin={objs[n].bbox.xmin}, ymin={objs[n].bbox.ymin}, xmax={objs[n].bbox.xmax}, ymax={objs[n].bbox.ymax}")
+            print(f"Object[{n}]: label={labels[objs[n].id]}, score={objs[n].score}, area={objs[n].bbox.area}")
             element.append(objs[n].score)  # print('element= ',element)
             detections.append(element)  # print('dets: ',dets)
+        print()
         # convert to numpy array #      print('npdets: ',dets)
         detections = np.array(detections)
         trdata = []
