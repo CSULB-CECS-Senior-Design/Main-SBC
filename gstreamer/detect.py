@@ -158,31 +158,22 @@ class Movements:
             print("Last seen human position was right")
             # pivot_right()
 
-    def find_closest_objs(self, objs: list[Object], min_certainty: float = 0.5) -> tuple:
-        """Finds the closest human and object in the camera view.
+    def get_proximity(self, y_coordinate: float, sections: int = 20) -> int:
+        """"Breaks down object in x sections from 0 being furthest to x-1 being closest"""
+        return int(y_coordinate * 100) % sections
+
+    def find_closest_obj(self, objs: list[Object], min_certainty: float = 0.5) -> Object:
+        """Finds the closest object based on y bottom coordinate then by area in the camera view.
         Args:
-            min_certainty (float, optional): The minimum certainty required for an object to be considered. Defaults to 0.5.
+            min_certainty (float, optional): the minimum certainty required for an object to be considered. Defaults to 0.5
         Returns:
-            tuple: (closest_human, closest_obj)
+            Object: Closest object
         """
-        objs = [obj for obj in objs if obj.score > min_certainty]
-
-        closest_human, closest_obj = None, None
-        closest_human_area, closest_obj_area = 0, 0
-        for obj in objs:
-            # If object detected is outside of camera view increase area
-            if obj.bbox.ymin < 0.1 and 0.9 < obj.bbox.ymax:
-                obj.bbox.area *= 1.1
-            # Update closest human
-            if obj.id == 0 and obj.bbox.area > closest_human_area:
-                closest_human = obj
-                closest_human_area = obj.bbox.area
-            # Update closest object
-            if obj.bbox.area > closest_obj_area:
-                closest_obj = obj
-                closest_obj_area = obj.bbox.area
-
-        return (closest_human, closest_obj)
+        filtered_objs = [obj for obj in objs if obj.score > min_certainty]
+        closest_obj = max(filtered_objs, 
+                          key=lambda obj: (self.get_proximity(obj.bbox.ymax), obj.bbox.area), default=None
+                          )
+        return closest_obj
 
     def is_too_close(self, obj, threshold=0.2) -> bool:
         """Checks if the given object is too close to the camera.
@@ -217,7 +208,8 @@ class Movements:
         Args:
             objs (list[Object]): The Bounding Box objects detected in the camera view.
         """
-        closest_human, closest_obj = self.find_closest_objs(objs)
+        closest_human = self.find_closest_obj(objs=[obj for obj in objs if obj.id == 0])
+        closest_obj = self.find_closest_obj(objs=objs, min_certainty=0.1)
 
         # If no human is detected
         if not closest_human:
@@ -299,7 +291,7 @@ def main():
             element.append(objs[n].bbox.ymin)
             element.append(objs[n].bbox.xmax)
             element.append(objs[n].bbox.ymax)
-            print(f"Object[{n}]: label={labels[objs[n].id]}, score={objs[n].score}, area={objs[n].bbox.area}")
+            print(f"Object[{n}]: label={labels[objs[n].id]}, score={objs[n].score}, area={objs[n].bbox.area}, ymin={objs[n].bbox.ymin}, ymax={objs[n].bbox.ymax}")
             element.append(objs[n].score)  # print('element= ',element)
             detections.append(element)  # print('dets: ',dets)
         print()
