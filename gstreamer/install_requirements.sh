@@ -1,63 +1,45 @@
 #!/bin/bash
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
-  echo "Installing DevBoard specific dependencies"
-  sudo apt-get install -y python3-pip python3-edgetpuvision
-  sudo python3 -m pip install svgwrite
-else
-  # Install gstreamer 
-  sudo apt-get install -y gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi gir1.2-gtk-3.0
-  python3 -m pip install svgwrite
+echo "Checking if Python3 version 3.6-3.9.16 is installed..."
 
-  if grep -s -q "Raspberry Pi" /sys/firmware/devicetree/base/model; then
-    echo "Installing Raspberry Pi specific dependencies"
-    sudo apt-get install python3-rpi.gpio
-    # Add v4l2 video module to kernel
-    if ! grep -q "bcm2835-v4l2" /etc/modules; then
-      echo bcm2835-v4l2 | sudo tee -a /etc/modules
+# Function to compare versions
+version_lte() {
+    [ "$1" = "$(echo -e "$1\n$2" | sort -V | head -n1)" ]
+}
+
+# Function to check and perform operations based on Python version
+check_and_install() {
+    local py_executable=$1
+    # Extracting the Python version
+    local version=$($py_executable -c 'import platform; print(platform.python_version())')
+    
+    # Define the version limits
+    local min_version="3.6"
+    local max_version="3.9.16"
+    
+    # Check if the Python version is within the specified range
+    if version_lte $min_version $version && version_lte $version $max_version; then
+        echo "Version of $py_executable is within the range ($min_version to $max_version). Proceeding with pip, wheel, and setuptools installation/upgrade."
+        
+        # Upgrade pip
+        $py_executable -m pip install --upgrade pip
+        
+        if grep -s -q "Raspberry Pi" /sys/firmware/devicetree/base/model; then
+            echo "Raspberry Pi detected. Installing Google Coral TPU dependencies."
+            echo "Installing wheel and setuptools for Raspberry Pi."
+            $py_executable -m pip install wheel==0.42.0 setuptools==58.0.0
+            $py_executable -m pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
+            $py_executable -m pip install svgwrite
+            $py_executable -m pip install -r requirements.txt
+        fi
+    else
+        echo "Version of $py_executable ($version) is outside the range. Skipping."
     fi
-    sudo modprobe bcm2835-v4l2 
-  fi
-fi
+}
 
-# Verify models are downloaded
-if [ ! -d "../models" ]
-then
-    cd ..
-    echo "Downloading models."
-    bash download_models.sh
-    cd -
+# Attempt to use python3 as the primary executable
+if command -v python3 &>/dev/null; then
+    check_and_install python3
+else
+    echo "Python3 command is not available."
 fi
-
-# Install Tracker Dependencies
-echo
-echo "Installing tracker dependencies."
-echo
-echo "Note that the trackers have their own licensing, many of which
-are not Apache. Care should be taken if using a tracker with restrictive
-licenses for end applications."
-
-read -p "Install SORT (GPLv3)? " -n 1 -r
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
-    wget https://github.com/abewley/sort/archive/master.zip -O sort.zip
-    unzip sort.zip -d ../third_party
-    rm sort.zip
-    sudo apt install python3-skimage
-    sudo apt install python3-dev
-    python3 -m pip install -r requirements_for_sort_tracker.txt
-fi
-echo
