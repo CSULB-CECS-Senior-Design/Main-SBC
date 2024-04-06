@@ -175,7 +175,7 @@ class Movements:
                           )
         return closest_obj
 
-    def is_too_close(self, obj, threshold=0.2) -> bool:
+    def is_too_close(self, obj: Object, threshold: float = 0.2) -> bool:
         """Checks if the given object is too close to the camera.
         Args:
             obj (BBox Object): The object detected in the camera view.
