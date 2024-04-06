@@ -129,17 +129,33 @@ def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
                       area=(xmax - xmin) * (ymax - ymin)))
     return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
+def get_proximity(y_coordinate: float, sections: int = 20) -> int:
+    """"Breaks down object in x sections from 0 being furthest to x-1 being closest"""
+    return int(y_coordinate * 100) % sections
+
+def get_closest_object(self, objs: list[Object], min_certainty: float = 0.5) -> Object:
+    """Finds the closest object based on y bottom coordinate then by area in the camera view.
+    Args:
+        min_certainty (float, optional): the minimum certainty required for an object to be considered. Defaults to 0.5
+    Returns:
+        Object: Closest object
+    """
+    filtered_objs = [obj for obj in objs if obj.score > min_certainty]
+    closest_obj = max(filtered_objs, 
+                      key=lambda obj: (get_proximity(obj.bbox.ymax), obj.bbox.area), 
+                      default=None
+                      )
+    return closest_obj
 
 class PositionSide:
     LEFT = False
     RIGHT = True
 
-
 class Movements:
     def __init__(self):
         self.last_human_position = PositionSide.LEFT    # Default
 
-    def get_obj_xside(self, obj: Object) -> PositionSide:
+    def _get_obj_xside(self, obj: Object) -> PositionSide:
         """Returns the position side of the object in the camera view.
         Args:
             obj (BBox Object): The object detected in the camera view.
@@ -149,7 +165,7 @@ class Movements:
         xcenter = (obj.bbox.xmin + obj.bbox.xmax) / 2
         return PositionSide.LEFT if xcenter < 0.5 else PositionSide.RIGHT
 
-    def face_last_human_position(self):
+    def _face_last_human_position(self):
         """Pivots in the direction of the last seen human position."""
         if self.last_human_position == PositionSide.LEFT:
             print("Last seen human position was left")
@@ -157,23 +173,6 @@ class Movements:
         else:
             print("Last seen human position was right")
             # pivot_right()
-
-    def get_proximity(self, y_coordinate: float, sections: int = 20) -> int:
-        """"Breaks down object in x sections from 0 being furthest to x-1 being closest"""
-        return int(y_coordinate * 100) % sections
-
-    def find_closest_obj(self, objs: list[Object], min_certainty: float = 0.5) -> Object:
-        """Finds the closest object based on y bottom coordinate then by area in the camera view.
-        Args:
-            min_certainty (float, optional): the minimum certainty required for an object to be considered. Defaults to 0.5
-        Returns:
-            Object: Closest object
-        """
-        filtered_objs = [obj for obj in objs if obj.score > min_certainty]
-        closest_obj = max(filtered_objs, 
-                          key=lambda obj: (self.get_proximity(obj.bbox.ymax), obj.bbox.area), default=None
-                          )
-        return closest_obj
 
     def is_too_close(self, obj: Object, threshold: float = 0.2) -> bool:
         """Checks if the given object is too close to the camera.
@@ -185,7 +184,7 @@ class Movements:
         """
         return obj.bbox.xmin < threshold and 1 - threshold < obj.bbox.xmax
 
-    def follow_human(self, human) -> None:
+    def _follow_human(self, human) -> None:
         """Follows the given human in the camera view.
         Args:
             human (BBox Object): The human detected in the camera view.
@@ -208,14 +207,14 @@ class Movements:
         Args:
             objs (list[Object]): The Bounding Box objects detected in the camera view.
         """
-        closest_human = self.find_closest_obj(objs=[obj for obj in objs if obj.id == 0])
-        closest_obj = self.find_closest_obj(objs=objs, min_certainty=0.1)
+        closest_human = get_closest_object(objs=[obj for obj in objs if obj.id == 0])
+        closest_obj = get_closest_object(objs=objs, min_certainty=0.1)
 
         # If no human is detected
         if not closest_human:
             print("No humans detected")
             # Pivot in directions of last seen human position
-            self.face_last_human_position()
+            self._face_last_human_position()
             return
 
         # If human is the closest object
@@ -224,7 +223,7 @@ class Movements:
             # print(f"Centering on human with area {closest_human.bbox.area}")
             # If human is not too close to the camera
             if not self.is_too_close(closest_human):
-                self.follow_human(closest_human)
+                self._follow_human(closest_human)
             # Else goal met; stop moving
         # Else closest object is not a human
         else:
@@ -233,12 +232,12 @@ class Movements:
 
             if self.is_too_close(closest_obj):
                 print("Object is too close to the camera")
-                self.face_last_human_position()
+                self._face_last_human_position()
             else:  # steer into nearest human
-                self.follow_human(closest_human)
+                self._follow_human(closest_human)
 
         # Cache last seen human position
-        self.last_human_position = self.get_obj_xside(closest_human)
+        self.last_human_position = self._get_obj_xside(closest_human)
 
 
 def main():
@@ -262,6 +261,18 @@ def main():
     parser.add_argument('--tracker', help='Name of the Object Tracker To be used.',
                         default=None,
                         choices=[None, 'sort'])
+    parser.add_argument('--resolution', help='Resolution of the video source.',
+                        default=cameras.get_resolution(), 
+                        type=tuple, 
+                        choices=[
+                            (640, 480), 
+                            (864, 480), 
+                            (1280, 720), 
+                            (1920, 1080), 
+                            (2560, 1440), 
+                            (3840, 2160), 
+                            'razer kiyo'])
+
     args = parser.parse_args()
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
@@ -310,7 +321,7 @@ def main():
             return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines, trdata, trackerFlag)
 
     result = gstreamer.run_pipeline(user_callback,
-                                    src_size=cameras.get_razer_kiyo_resolution(),
+                                    src_size=args.resolution,
                                     appsink_size=inference_size,
                                     trackerName=args.tracker,
                                     videosrc=args.videosrc,
