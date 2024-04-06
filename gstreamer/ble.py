@@ -16,7 +16,7 @@ class SimpleCharacteristic(pybleno.Characteristic):
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
         self._value = data  # Update the value with incoming data
-        print(f'Received message: {self._value.decode("utf-8")}')
+        print(f'Received message: {self._value}, decoded: {self._value.decode("utf-8")}')
         callback(pybleno.Characteristic.RESULT_SUCCESS)
 
 class R2ARC_Service:
