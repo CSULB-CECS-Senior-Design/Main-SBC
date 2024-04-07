@@ -133,15 +133,17 @@ def get_proximity(y_coordinate: float, sections: int = 20) -> int:
     """"Breaks down object in x sections from 0 being furthest to x-1 being closest"""
     return int(y_coordinate * 100) % sections
 
-def get_closest_object(self, objs: list[Object], min_certainty: float = 0.5) -> Object:
+def get_closest_obj(objs: list[Object], min_certainty: float = 0.5) -> Object:
     """Finds the closest object based on y bottom coordinate then by area in the camera view.
     Args:
         min_certainty (float, optional): the minimum certainty required for an object to be considered. Defaults to 0.5
     Returns:
         Object: Closest object
     """
-    filtered_objs = [obj for obj in objs if obj.score > min_certainty]
-    closest_obj = max(filtered_objs, 
+    if min_certainty:   # Filter by minimum certainty
+        objs = [obj for obj in objs if obj.score > min_certainty]
+        
+    closest_obj = max(objs, 
                       key=lambda obj: (get_proximity(obj.bbox.ymax), obj.bbox.area), 
                       default=None
                       )
@@ -207,8 +209,8 @@ class Movements:
         Args:
             objs (list[Object]): The Bounding Box objects detected in the camera view.
         """
-        closest_human = get_closest_object(objs=[obj for obj in objs if obj.id == 0])
-        closest_obj = get_closest_object(objs=objs, min_certainty=0.1)
+        closest_human = get_closest_obj(objs=[obj for obj in objs if obj.id == 0])
+        closest_obj = get_closest_obj(objs=objs, min_certainty=None)
 
         # If no human is detected
         if not closest_human:
@@ -249,9 +251,9 @@ def main():
                         default=os.path.join(default_model_dir, default_model))
     parser.add_argument('--labels', help='label file path',
                         default=os.path.join(default_model_dir, default_labels))
-    parser.add_argument('--top_k', type=int, default=3,
+    parser.add_argument('--top_k', type=int, default=20,
                         help='number of categories with highest score to display')
-    parser.add_argument('--threshold', type=float, default=0.1,
+    parser.add_argument('--threshold', type=float, default=0.2,
                         help='classifier score threshold')
     parser.add_argument('--videosrc', help='Which video source to use. ',
                         default='/dev/video0')
@@ -261,17 +263,17 @@ def main():
     parser.add_argument('--tracker', help='Name of the Object Tracker To be used.',
                         default=None,
                         choices=[None, 'sort'])
-    parser.add_argument('--resolution', help='Resolution of the video source.',
-                        default=cameras.get_resolution(), 
-                        type=tuple, 
-                        choices=[
-                            (640, 480), 
-                            (864, 480), 
-                            (1280, 720), 
-                            (1920, 1080), 
-                            (2560, 1440), 
-                            (3840, 2160), 
-                            'razer kiyo'])
+    # parser.add_argument('--resolution', help='Resolution of the video source.',
+    #                     default=cameras.get_resolution(), 
+    #                     type=tuple, 
+    #                     choices=[
+    #                         (640, 480), 
+    #                         (864, 480), 
+    #                         (1280, 720), 
+    #                         (1920, 1080), 
+    #                         (2560, 1440), 
+    #                         (3840, 2160), 
+    #                         'razer kiyo'])
 
     args = parser.parse_args()
 
@@ -321,12 +323,12 @@ def main():
             return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines, trdata, trackerFlag)
 
     result = gstreamer.run_pipeline(user_callback,
-                                    src_size=args.resolution,
+                                    src_size=cameras.get_razer_kiyo_resolution(), 
                                     appsink_size=inference_size,
                                     trackerName=args.tracker,
                                     videosrc=args.videosrc,
                                     videofmt=args.videofmt)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+    # main()
