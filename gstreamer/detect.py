@@ -241,46 +241,115 @@ class Movements:
         # Cache last seen human position
         self.last_human_position = self._get_obj_xside(closest_human)
 
+class DroidVision:
+    def __init__(self, 
+                 model: str = "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", 
+                 labels: str = "../models/coco_labels.txt", 
+                 top_k: int = 20, 
+                 tracker = None,
+                 threshold: float = 0.2, 
+                 videosrc: str = '/dev/video0', 
+                 videofmt: str = 'raw', 
+                 resolution: tuple = cameras.get_resolution()):
+        """"Main function to run object detection on camera frames using GStreamer.
+        Args:
+            model (str, optional): The path to the model file. Defaults to "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite".
+            labels (str, optional): The path to the labels file. Defaults to "../models/coco_labels.txt".
+            top_k (int, optional): The number of top results to display. Defaults to 20.
+            tracker ([type], optional): The object tracker to use. Defaults to None. Choices: [None, 'sort']
+            threshold (float, optional): The threshold for detection. Defaults to 0.2.
+            videosrc (str, optional): The video source. Defaults to '/dev/video0'.
+            videofmt (str, optional): The video format. Defaults to 'raw'. Choices: ['raw', 'h264', 'jpeg']
+            resolution (tuple, optional): The resolution of the camera. Defaults to cameras.get_resolution()."""
+        self.model = model
+        self.labels = labels
+        self.top_k = top_k
+        self.tracker = tracker
+        self.threshold = threshold
+        self.videosrc = videosrc
+        self.videofmt = videofmt
+        self.resolution = resolution 
 
-def main():
-    default_model_dir = '../models'
-    default_model = 'mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite'
-    default_labels = 'coco_labels.txt'
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help='.tflite model path',
-                        default=os.path.join(default_model_dir, default_model))
-    parser.add_argument('--labels', help='label file path',
-                        default=os.path.join(default_model_dir, default_labels))
-    parser.add_argument('--top_k', type=int, default=20,
-                        help='number of categories with highest score to display')
-    parser.add_argument('--threshold', type=float, default=0.2,
-                        help='classifier score threshold')
-    parser.add_argument('--videosrc', help='Which video source to use. ',
-                        default='/dev/video0')
-    parser.add_argument('--videofmt', help='Input video format.',
-                        default='raw',
-                        choices=['raw', 'h264', 'jpeg'])
-    parser.add_argument('--tracker', help='Name of the Object Tracker To be used.',
-                        default=None,
-                        choices=[None, 'sort'])
-    # parser.add_argument('--resolution', help='Resolution of the video source.',
-    #                     default=cameras.get_resolution(), 
-    #                     type=tuple, 
-    #                     choices=[
-    #                         (640, 480), 
-    #                         (864, 480), 
-    #                         (1280, 720), 
-    #                         (1920, 1080), 
-    #                         (2560, 1440), 
-    #                         (3840, 2160), 
-    #                         'razer kiyo'])
+    def _init_model(self):
+        print('Loading {} with {} labels.'.format(self.model, self.labels))
+        self.interpreter = common.make_interpreter(self.model)
+        self.interpreter.allocate_tensors()
+        self.labels = load_labels(self.labels)
 
-    args = parser.parse_args()
+    def _init_display(self):
+        w, h, _ = common.input_image_size(self.interpreter)
+        self.inference_size = (w, h)
+        # Average fps over last 30 frames.
+        self.fps_counter = common.avg_fps_counter(30)
 
-    print('Loading {} with {} labels.'.format(args.model, args.labels))
-    interpreter = common.make_interpreter(args.model)
+    def _user_callback(self, input_tensor, src_size, inference_box, mot_tracker):
+        start_time = time.monotonic()
+        common.set_input(self.interpreter, input_tensor)
+        self.interpreter.invoke()
+        objs = get_output(self.interpreter, self.threshold, self.top_k)
+        # print(f"Follow state: {self.follow}")
+        if self.follow:
+            self.moves.find_human(objs)
+        end_time = time.monotonic()
+        detections = [(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs]
+        # for obj in objs:
+        #     print(f"Object: label={self.labels[obj.id]}, score={obj.score}, area={obj.bbox.area}, ymin={obj.bbox.ymin}, ymax={obj.bbox.ymax}")
+        # print()
+        detections = np.array(detections)
+        trdata = []
+        trackerFlag = False
+        if detections.any():
+            if mot_tracker != None:
+                trdata = mot_tracker.update(detections)
+                trackerFlag = True
+            text_lines = [
+                'Inference: {:.2f} ms'.format((end_time - start_time) * 1000),
+                'FPS: {} fps'.format(round(next(self.fps_counter))), ]
+        if len(objs) != 0:
+            return generate_svg(src_size, self.inference_size, inference_box, objs, self.labels, text_lines, trdata, trackerFlag)
+        
+    def start(self):
+        self._init_model()
+        self._init_display()
+        self.follow: bool = False
+        self.moves = Movements()
+        self.run = gstreamer.run_pipeline(self._user_callback, 
+                                     self.resolution, 
+                                     self.inference_size, 
+                                     self.tracker, 
+                                     self.videosrc, 
+                                     self.videofmt)
+        
+    def set_follow(self, follow: bool):
+        self.follow = follow
+
+    def toggle_follow(self):
+        self.follow ^= True
+
+def main(model: str = "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite",  
+         labels: str = "../models/coco_labels.txt", 
+         top_k: int = 20, 
+         tracker = None,  
+         threshold: float = 0.2,  
+         videosrc: str = '/dev/video0', 
+         videofmt: str = 'raw', 
+         resolution: tuple = cameras.get_resolution()):
+    """Main function to run object detection on camera frames using GStreamer.
+    Args:
+        model (str, optional): The path to the model file. Defaults to "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite".
+        labels (str, optional): The path to the labels file. Defaults to "../models/coco_labels.txt".
+        top_k (int, optional): The number of top results to display. Defaults to 20.
+        tracker ([type], optional): The object tracker to use. Defaults to None. Choices: [None, 'sort']
+        threshold (float, optional): The threshold for detection. Defaults to 0.2.
+        videosrc (str, optional): The video source. Defaults to '/dev/video0'.
+        videofmt (str, optional): The video format. Defaults to 'raw'. Choices: ['raw', 'h264', 'jpeg']
+        resolution (tuple, optional): The resolution of the camera. Defaults to cameras.get_resolution().
+    """
+
+    print('Loading {} with {} labels.'.format(model, labels))
+    interpreter = common.make_interpreter(model)
     interpreter.allocate_tensors()
-    labels = load_labels(args.labels)
+    labels = load_labels(labels)
 
     w, h, _ = common.input_image_size(interpreter)
     inference_size = (w, h)
@@ -294,7 +363,7 @@ def main():
         common.set_input(interpreter, input_tensor)
         interpreter.invoke()
         # For larger input image sizes, use the edgetpu.classification.engine for better performance
-        objs = get_output(interpreter, args.threshold, args.top_k)
+        objs = get_output(interpreter, threshold, top_k)
         moves.find_human(objs)
         end_time = time.monotonic()
         detections = []  # np.array([])
@@ -323,12 +392,14 @@ def main():
             return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines, trdata, trackerFlag)
 
     result = gstreamer.run_pipeline(user_callback,
-                                    src_size=cameras.get_razer_kiyo_resolution(), 
+                                    src_size=resolution, 
                                     appsink_size=inference_size,
-                                    trackerName=args.tracker,
-                                    videosrc=args.videosrc,
-                                    videofmt=args.videofmt)
+                                    trackerName=tracker,
+                                    videosrc=videosrc,
+                                    videofmt=videofmt)
 
 
-# if __name__ == '__main__':
-    # main()
+if __name__ == '__main__':
+    # main(tracker='sort', resolution=cameras.get_razer_kiyo_resolution())
+    vision = DroidVision(tracker='sort', resolution=cameras.get_razer_kiyo_resolution())
+    # vision = DroidVision()
