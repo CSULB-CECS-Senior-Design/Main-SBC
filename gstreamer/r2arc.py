@@ -6,12 +6,15 @@ import ble
 import enum
 import threading
 import cameras
+import motors
 
 class Controls:
     FORWARD = 'W'
     LEFT = 'A'
     BACKWARD = 'S'
     RIGHT = 'D'
+    PIVOT_LEFT = 'O'
+    PIVOT_RIGHT = 'P'
     STOP = 'Q'
     FOLLOW = 'F'
     REMOTE = 'R'
@@ -19,6 +22,8 @@ class Controls:
                 LEFT, 
                 BACKWARD, 
                 RIGHT, 
+                PIVOT_LEFT, 
+                PIVOT_RIGHT, 
                 STOP}
     STATES = {STOP,
             FOLLOW,
@@ -32,8 +37,6 @@ class State(enum.Enum):
 
 if __name__ == '__main__':
     # Setup Machine Vision
-    # vision = detect.DroidVision(tracker='sort', 
-    #                             resolution=cameras.get_razer_kiyo_resolution())
     vision = detect.DroidVision(resolution=cameras.get_razer_kiyo_resolution())
     vision_thread = threading.Thread(target=vision.start)
     vision_thread.start()
@@ -45,7 +48,23 @@ if __name__ == '__main__':
     # Keep track of states and last command
     state = State.IDLE
     command = ''
-    # moves = motors.Movements()
+    moves = motors.Movements()
+
+    def move_motor(command: str) -> None:
+        if command == Controls.FORWARD:
+            moves.forward()
+        elif command == Controls.LEFT:
+            moves.left()
+        elif command == Controls.BACKWARD:
+            moves.backwards()
+        elif command == Controls.RIGHT:
+            moves.right()
+        elif command == Controls.STOP:
+            moves.stop()
+        elif command == Controls.PIVOT_LEFT:
+            moves.pivot_left()
+        elif command == Controls.PIVOT_RIGHT:
+            moves.pivot_right()
 
     try:
         while True:
@@ -54,18 +73,16 @@ if __name__ == '__main__':
             if command == Controls.STOP:
                 state = State.IDLE
                 vision.set_follow(False)
+                moves.stop()
             elif command == Controls.FOLLOW:
                 state = State.FOLLOW if state != State.FOLLOW else State.IDLE
                 vision.toggle_follow()
             elif command == Controls.REMOTE or command in Controls.MOVEMENTS:
                 state = State.REMOTE
                 vision.set_follow(False)
+                move_motor(command)
             else:
                 print("Invalid command")
-            
-            # Execute movement commands
-            # if command in Controls.MOVEMENTS:
-
 
             print(f"State: {state}, Command: {command}")
 
