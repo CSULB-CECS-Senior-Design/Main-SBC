@@ -1,5 +1,7 @@
-# ble.py
-# Bluetooth Low Energy (BLE) service for the R2ARC project.
+'''
+ble.py
+Bluetooth Low Energy (BLE) service for the R2-ARC project. Uses iOS app to send commands to the main SBC.
+'''
 
 import os
 import time
