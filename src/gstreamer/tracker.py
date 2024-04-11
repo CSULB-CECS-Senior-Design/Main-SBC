@@ -37,6 +37,6 @@ class ObjectTracker(object):
 
 class SortTracker(ObjectTracker):
     def __init__(self):
-        sys.path.append(os.path.join(os.path.dirname(__file__), '../third_party', 'sort-master'))
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../../third_party', 'sort-master'))
         from sort import Sort
         self.mot_tracker = Sort()
