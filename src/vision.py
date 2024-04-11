@@ -1,5 +1,6 @@
 """
 vision.py
+R2-ARC Machine Vision module using gstreamer, Google Coral TPU, and TensorFlow Lite for object detection.
 """
 
 import time, numpy

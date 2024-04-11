@@ -1,7 +1,9 @@
-# r2arc.py
-# Main program for the R2ARC project
+'''
+r2arc.py
+Main program for the R2ARC project
+'''
 
-import vision, vision, ble
+import vision, motors, ble
 import enum, threading
 from gstreamer import cameras
 

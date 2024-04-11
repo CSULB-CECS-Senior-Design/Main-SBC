@@ -1,3 +1,8 @@
+'''
+motors.py
+Motor controller communication via SPI for the R2-ARC project
+'''
+
 import spidev
 import time
 
