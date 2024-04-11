@@ -38,6 +38,11 @@ class State(enum.Enum):
     FOLLOW = 1
     REMOTE = 2
 
+def quit_r2arc(vision: vision.DroidVision, ble: ble.R2ARC_Service):
+    print("Quitting program")
+    vision.stop()
+    ble.stop()
+
 if __name__ == '__main__':
     # Setup motor controller communication
     r2motor = motors.Movements()
@@ -76,7 +81,5 @@ if __name__ == '__main__':
             print(f"State: {state}, Command: {command}")
 
     except KeyboardInterrupt:
-        # vision.stop()
         r2vision_thread.join()
-        print("Program manually terminated")
-        r2ble.stop()
+        quit_r2arc(r2vision, r2ble)

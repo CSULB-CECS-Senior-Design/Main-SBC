@@ -179,6 +179,10 @@ class DroidVision:
             except Exception as e:
                 attempts += 1
                 print(f"Error: {e}, attempts: {attempts}")
+
+    def stop(self):
+        self.follow = False
+        self.run = None
         
     def set_follow(self, follow: bool):
         self.follow = follow
