@@ -15,7 +15,7 @@
 import sys
 import svgwrite
 import threading
-from tracker import ObjectTracker
+from .tracker import ObjectTracker
 
 import gi
 gi.require_version('Gst', '1.0')
