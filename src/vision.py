@@ -189,6 +189,8 @@ class DroidVision:
 
     def toggle_follow(self):
         self.follow ^= True
+        if not self.follow:
+            self.automove._motors.stop()
 
 if __name__ == '__main__':
     vision = DroidVision(tracker='sort', resolution=cameras.get_razer_kiyo_resolution())
