@@ -57,7 +57,7 @@ if __name__ == '__main__':
     r2ble.setup()
     # Keep track of states and last command
     state = State.IDLE
-    last_command, command = None, ''
+    command = ''
 
     try:
         while True:
