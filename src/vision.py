@@ -3,7 +3,7 @@ vision.py
 R2-ARC Machine Vision module using gstreamer, Google Coral TPU, and TensorFlow Lite for object detection.
 """
 
-import time, numpy
+import time, numpy, os
 import motors
 from gstreamer import *
 from gstreamer import Object as Object
@@ -180,9 +180,10 @@ class DroidVision:
                 attempts += 1
                 print(f"Error: {e}, attempts: {attempts}")
 
-    def stop(self):
+    def stop(self, process: str = 'vision.py'):
         self.follow = False
         self.run = None
+        os.system(f"pkill -f {process}")
         
     def set_follow(self, follow: bool):
         self.follow = follow
