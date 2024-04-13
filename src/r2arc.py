@@ -38,11 +38,6 @@ class State(enum.Enum):
     FOLLOW = 1
     REMOTE = 2
 
-def quit_r2arc(vision: vision.DroidVision, ble: ble.R2ARC_Service):
-    print("Quitting program")
-    vision.stop()
-    ble.stop()
-
 if __name__ == '__main__':
     # Setup motor controller communication
     r2motor = motors.Movements()
@@ -53,7 +48,7 @@ if __name__ == '__main__':
     # Setup Bluetooth Low Energy connection
     SERVICE_UUID = '12345678-1234-1234-1234-123456789012'
     CHARACTERISTIC_UUID = '87654321-4321-4321-4321-210987654321'
-    r2ble = ble.R2ARC_Service(SERVICE_UUID, CHARACTERISTIC_UUID)
+    r2ble = ble.R2ARCService(SERVICE_UUID, CHARACTERISTIC_UUID)
     r2ble.setup()
     # Keep track of states and last command
     state = State.IDLE
@@ -81,5 +76,15 @@ if __name__ == '__main__':
             print(f"State: {state}, Command: {command}")
 
     except KeyboardInterrupt:
+        print("Quitting program")
+
+        r2motor.stop()
+        print("Stopped motor")
+
+        r2ble.stop()
+        print("Stopped bluetooth low energy")
+
+        print("Stopping Machine Vision and closing python program")
+        r2vision.stop(process="r2arc.py")
         r2vision_thread.join()
-        quit_r2arc(r2vision, r2ble)
+        
