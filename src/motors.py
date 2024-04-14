@@ -123,7 +123,7 @@ def test_commands() -> None:
         print(f"Attempting to send command: {key}")
         received = command()
         print(f"Sent: {key}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
-        time.sleep(2)
+        time.sleep(4)
 
 if __name__ == "__main__":
     test_commands()
