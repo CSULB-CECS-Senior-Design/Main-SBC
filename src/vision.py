@@ -90,6 +90,7 @@ class AutoMovements:
             else:  # steer into nearest human
                 self._follow_human(closest_human)
 
+        print()
         # Cache last seen human position
         self.last_human_position = self._get_obj_xside(closest_human)
 
@@ -149,9 +150,6 @@ class DroidVision:
             self.automove.find_human(objs)
         end_time = time.monotonic()
         detections = [(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs]
-        # for obj in objs:
-        #     print(f"Object: label={self.labels[obj.id]}, score={obj.score}, area={obj.bbox.area}, ymin={obj.bbox.ymin}, ymax={obj.bbox.ymax}")
-        # print()
         detections = numpy.array(detections)
         trdata = []
         trackerFlag = False
