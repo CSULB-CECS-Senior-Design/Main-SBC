@@ -32,6 +32,22 @@ class Controls:
         REMOTE
     }
     ALL = STATES.union(MOVEMENTS)
+    prints = {
+        FORWARD: "Moving forward", 
+        LEFT: "Moving left", 
+        BACKWARD: "Moving backward", 
+        RIGHT: "Moving right", 
+        PIVOT_LEFT: "Pivoting left", 
+        PIVOT_RIGHT: "Pivoting right", 
+        STOP: "Stopping", 
+        FOLLOW: "Following", 
+        REMOTE: "Remote control"
+    }
+
+    def print_valid_command(command: str) -> str:
+        if command in Controls.ALL:
+            return Controls.prints[command]
+        return "Invalid command"
 
 class State(enum.Enum):
     IDLE = 0
@@ -73,18 +89,12 @@ if __name__ == '__main__':
             else:
                 print("Invalid command")
 
-            print(f"State: {state}, Command: {command}")
+            print(f"Command function: {Controls.print_valid_command(command)}, State: {state} \n")
 
     except KeyboardInterrupt:
         print("Quitting program")
-
         r2motor.stop()
-        print("Stopped motor")
-
         r2ble.stop()
-        print("Stopped bluetooth low energy")
-
-        print("Stopping Machine Vision and closing python program")
         r2vision.stop(process="r2arc.py")
         r2vision_thread.join()
         
