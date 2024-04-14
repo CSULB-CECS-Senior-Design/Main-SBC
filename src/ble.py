@@ -18,7 +18,7 @@ class RecieveCharactersCharacteristic(pybleno.Characteristic):
 
     def onWriteRequest(self, data, offset, withoutResponse, callback) -> None:
         self._value = data  # Update the value with incoming data
-        print(f'Received message: {self._value}, decoded: {self._value.decode("utf-8")}')
+        print(f'Received iOS BLE command character: {self._value.decode("utf-8")}')
         callback(pybleno.Characteristic.RESULT_SUCCESS)
 
     def getValue(self) -> str:
