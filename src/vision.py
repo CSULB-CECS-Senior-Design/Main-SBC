@@ -3,7 +3,7 @@ vision.py
 R2-ARC Machine Vision module using gstreamer, Google Coral TPU, and TensorFlow Lite for object detection.
 """
 
-import time, numpy
+import time, numpy, os
 import motors
 from gstreamer import *
 from gstreamer import Object as Object
@@ -90,6 +90,7 @@ class AutoMovements:
             else:  # steer into nearest human
                 self._follow_human(closest_human)
 
+        print()
         # Cache last seen human position
         self.last_human_position = self._get_obj_xside(closest_human)
 
@@ -149,9 +150,6 @@ class DroidVision:
             self.automove.find_human(objs)
         end_time = time.monotonic()
         detections = [(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs]
-        # for obj in objs:
-        #     print(f"Object: label={self.labels[obj.id]}, score={obj.score}, area={obj.bbox.area}, ymin={obj.bbox.ymin}, ymax={obj.bbox.ymax}")
-        # print()
         detections = numpy.array(detections)
         trdata = []
         trackerFlag = False
@@ -179,12 +177,19 @@ class DroidVision:
             except Exception as e:
                 attempts += 1
                 print(f"Error: {e}, attempts: {attempts}")
+
+    def stop(self, process: str = 'vision.py'):
+        self.follow = False
+        self.run = None
+        os.system(f"pkill -f {process}")
         
     def set_follow(self, follow: bool):
         self.follow = follow
 
     def toggle_follow(self):
         self.follow ^= True
+        if not self.follow:
+            self.automove._motors.stop()
 
 if __name__ == '__main__':
     vision = DroidVision(tracker='sort', resolution=cameras.get_razer_kiyo_resolution())

@@ -32,6 +32,22 @@ class Controls:
         REMOTE
     }
     ALL = STATES.union(MOVEMENTS)
+    prints = {
+        FORWARD: "Moving forward", 
+        LEFT: "Moving left", 
+        BACKWARD: "Moving backward", 
+        RIGHT: "Moving right", 
+        PIVOT_LEFT: "Pivoting left", 
+        PIVOT_RIGHT: "Pivoting right", 
+        STOP: "Stopping", 
+        FOLLOW: "Following", 
+        REMOTE: "Remote control"
+    }
+
+    def print_valid_command(command: str) -> str:
+        if command in Controls.ALL:
+            return Controls.prints[command]
+        return "Invalid command"
 
 class State(enum.Enum):
     IDLE = 0
@@ -48,11 +64,11 @@ if __name__ == '__main__':
     # Setup Bluetooth Low Energy connection
     SERVICE_UUID = '12345678-1234-1234-1234-123456789012'
     CHARACTERISTIC_UUID = '87654321-4321-4321-4321-210987654321'
-    r2ble = ble.R2ARC_Service(SERVICE_UUID, CHARACTERISTIC_UUID)
+    r2ble = ble.R2ARCService(SERVICE_UUID, CHARACTERISTIC_UUID)
     r2ble.setup()
     # Keep track of states and last command
     state = State.IDLE
-    last_command, command = None, ''
+    command = ''
 
     try:
         while True:
@@ -73,10 +89,12 @@ if __name__ == '__main__':
             else:
                 print("Invalid command")
 
-            print(f"State: {state}, Command: {command}")
+            print(f"Command function: {Controls.print_valid_command(command)}, State: {state} \n")
 
     except KeyboardInterrupt:
-        # vision.stop()
-        r2vision_thread.join()
-        print("Program manually terminated")
+        print("Quitting program")
+        r2motor.stop()
         r2ble.stop()
+        r2vision.stop(process="r2arc.py")
+        r2vision_thread.join()
+        
