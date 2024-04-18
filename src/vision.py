@@ -145,7 +145,7 @@ class DroidVision:
                 break
             except Exception as e:
                 print(f"Error initializing model: {e}")
-                attempts -= 1
+                attempts -= numpy.uint8(1)
 
     def _init_display(self):
         w, h, _ = common.input_image_size(self.interpreter)
