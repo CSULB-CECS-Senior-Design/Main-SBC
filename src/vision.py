@@ -156,8 +156,8 @@ class DroidVision:
         if self.follow:
             self.automove.find_human(objs)
         end_time = time.monotonic()
-        detections = [(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs]
-        detections = numpy.array(detections)
+        # print(f"Detected objects: {objs}")
+        detections = numpy.array([(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs])
         trdata = []
         trackerFlag = False
         if detections.any():
