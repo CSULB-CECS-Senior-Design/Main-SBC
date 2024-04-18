@@ -50,7 +50,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
             # Relative coordinates.
             x, y, w, h = x0, y0, x1 - x0, y1 - y0
             # Absolute coordinates, input tensor space.
-            x, y, w, h = np.uint16(x * inf_w), np.uint16(y * inf_h), np.uint16(w * inf_w), np.uint16(h * inf_h)
+            x, y, w, h = np.int16(x * inf_w), np.int16(y * inf_h), np.int16(w * inf_w), np.int16(h * inf_h)
             # Subtract boxing offset.
             x, y = x - box_x, y - box_y
             # Scale to source coordinate space.
@@ -67,7 +67,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
             # Relative coordinates.
             x, y, w, h = x0, y0, x1 - x0, y1 - y0
             # Absolute coordinates, input tensor space.
-            x, y, w, h = np.uint16(x * inf_w), np.uint16(y * inf_h), np.uint16(w * inf_w), np.uint16(h * inf_h)
+            x, y, w, h = np.int16(x * inf_w), np.int16(y * inf_h), np.int16(w * inf_w), np.int16(h * inf_h)
             # Subtract boxing offset.
             x, y = x - box_x, y - box_y
             # Scale to source coordinate space.
