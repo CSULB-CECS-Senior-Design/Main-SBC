@@ -99,9 +99,9 @@ class DroidVision:
                  motor: motors.Movements = motors.Movements(), 
                  model: str = "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", 
                  labels: str = "../models/coco_labels.txt", 
-                 top_k: int = 20, 
-                 tracker = None,
-                 threshold: float = 0.2, 
+                 top_k = numpy.uint8(20), 
+                 tracker = None, 
+                 threshold = numpy.float16(0.2), 
                  videosrc: str = '/dev/video0', 
                  videofmt: str = 'raw', 
                  resolution: tuple = cameras.get_resolution()):
@@ -129,10 +129,17 @@ class DroidVision:
         self.automove = AutoMovements(motor)
 
     def _init_model(self):
-        print('Loading {} with {} labels.'.format(self.model, self.labels))
-        self.interpreter = common.make_interpreter(self.model)
-        self.interpreter.allocate_tensors()
-        self.labels = detect.load_labels(self.labels)
+        attempts = numpy.uint8(3)
+        while attempts:
+            try:
+                print('Loading {} with {} labels.'.format(self.model, self.labels))
+                self.interpreter = common.make_interpreter(self.model)
+                self.interpreter.allocate_tensors()
+                self.labels = detect.load_labels(self.labels)
+                break
+            except Exception as e:
+                print(f"Error initializing model: {e}")
+                attempts -= 1
 
     def _init_display(self):
         w, h, _ = common.input_image_size(self.interpreter)
@@ -162,27 +169,22 @@ class DroidVision:
                 'FPS: {} fps'.format(round(next(self.fps_counter))), ]
         if len(objs) != 0:
             return detect.generate_svg(src_size, self.inference_size, inference_box, objs, self.labels, text_lines, trdata, trackerFlag)
-        
-    def start(self, max_attempts: int = 3):
-        attempts = 0
-        while attempts < max_attempts:
-            try:
-                self.run = gstreamer.run_pipeline(self._user_callback, 
-                             self.resolution, 
-                             self.inference_size, 
-                             self.tracker, 
-                             self.videosrc, 
-                             self.videofmt)
-                attempts = max_attempts
-            except Exception as e:
-                attempts += 1
-                print(f"Error: {e}, attempts: {attempts}")
 
-    def stop(self, process: str = 'vision.py'):
+    def start(self):
+        self.run = gstreamer.run_pipeline(
+            self._user_callback,
+            self.resolution,
+            self.inference_size,
+            self.tracker,
+            self.videosrc,
+            self.videofmt
+        )
+
+    def stop(self, process: str = "vision.py"):
         self.follow = False
         self.run = None
         os.system(f"pkill -f {process}")
-        
+
     def set_follow(self, follow: bool):
         self.follow = follow
 
