@@ -3,9 +3,7 @@ motors.py
 Motor controller communication via SPI for the R2-ARC project
 '''
 
-import numpy
 import spidev
-import time
 
 class Movements:
     def __init__(self, spi_channel: int = 0, speed: int = 5000000) -> None:
@@ -104,6 +102,7 @@ class Movements:
         return self.spi.xfer([ord(command)])
 
 if __name__ == "__main__":
+    import time
     # Test the Movements class
     move = Movements()
     commands = {
