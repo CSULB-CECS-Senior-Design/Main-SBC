@@ -22,13 +22,13 @@ class Movements:
         self.spi.open(0, spi_channel)  # Open SPI port 0, chip select (CS) is set by spi_channel
         self.spi.max_speed_hz = speed
         # Store ASCII values for faster communication
-        self._W_ASCII = numpy.uint8(87)
-        self._A_ASCII = numpy.uint8(65)
-        self._S_ASCII = numpy.uint8(83)
-        self._D_ASCII = numpy.uint8(68)
-        self._O_ASCII = numpy.uint8(79)
-        self._P_ASCII = numpy.uint8(80)
-        self._Q_ASCII = numpy.uint8(81)
+        self._W_ASCII = ord('W')
+        self._A_ASCII = ord('A')
+        self._S_ASCII = ord('S')
+        self._D_ASCII = ord('D')
+        self._O_ASCII = ord('O')
+        self._P_ASCII = ord('P')
+        self._Q_ASCII = ord('Q')
 
     # Below methods implement specific movements by sending single-byte commands
     def forward(self) -> list[int]:
