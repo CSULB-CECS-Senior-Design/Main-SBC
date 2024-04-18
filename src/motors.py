@@ -22,13 +22,13 @@ class Movements:
         self.spi.open(0, spi_channel)  # Open SPI port 0, chip select (CS) is set by spi_channel
         self.spi.max_speed_hz = speed
         # Store ASCII values for faster communication
-        self._W_ascii = numpy.uint8(87)
-        self._A_ascii = numpy.uint8(65)
-        self._S_ascii = numpy.uint8(83)
-        self._D_ascii = numpy.uint8(68)
-        self._O_ascii = numpy.uint8(79)
-        self._P_ascii = numpy.uint8(80)
-        self._Q_ascii = numpy.uint8(81)
+        self._W_ASCII = numpy.uint8(87)
+        self._A_ASCII = numpy.uint8(65)
+        self._S_ASCII = numpy.uint8(83)
+        self._D_ASCII = numpy.uint8(68)
+        self._O_ASCII = numpy.uint8(79)
+        self._P_ASCII = numpy.uint8(80)
+        self._Q_ASCII = numpy.uint8(81)
 
     # Below methods implement specific movements by sending single-byte commands
     def forward(self) -> list[int]:
@@ -38,7 +38,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """ 
-        return self.spi.xfer([self._W_ascii])
+        return self.spi.xfer([self._W_ASCII])
 
     def left(self) -> list[int]:
         """"Sends the character 'A' to the motor controller via SPI to move the R2-ARC droid left.
@@ -47,7 +47,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._A_ascii])
+        return self.spi.xfer([self._A_ASCII])
 
     def backwards(self) -> list[int]:
         """"Sends the character 'S' to the motor controller via SPI to move the R2-ARC droid backwards.
@@ -56,7 +56,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._S_ascii])
+        return self.spi.xfer([self._S_ASCII])
 
     def right(self) -> list[int]:
         """"Sends the character 'D' to the motor controller via SPI to move the R2-ARC droid right.
@@ -65,7 +65,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._D_ascii])
+        return self.spi.xfer([self._D_ASCII])
 
     def pivot_left(self) -> list[int]:
         """"Sends the character 'O' to the motor controller via SPI to pivot the R2-ARC droid left in place.
@@ -74,7 +74,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._O_ascii])
+        return self.spi.xfer([self._O_ASCII])
 
     def pivot_right(self) -> list[int]:
         """"Sends the character 'P' to the motor controller via SPI to pivot the R2-ARC droid right in place.
@@ -83,7 +83,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._P_ascii])
+        return self.spi.xfer([self._P_ASCII])
 
     def stop(self) -> list[int]:
         """"Sends the character 'Q' to the motor controller via SPI to stop the R2-ARC droid.
@@ -92,7 +92,7 @@ class Movements:
         returns:
             list[int]: List containing the received byte from the motor controller.
         """
-        return self.spi.xfer([self._Q_ascii])
+        return self.spi.xfer([self._Q_ASCII])
     
     def send_command(self, command: str) -> list[int]:
         """Sends the specified command to the motor controller.
@@ -119,4 +119,10 @@ if __name__ == "__main__":
         print(f"Attempting to send command: {key}")
         received = command()
         print(f"Sent: {key}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
+        time.sleep(4)
+
+    for dec in range(256):
+        print(f"Attempting to send command: {chr(dec)}")
+        received = move.send_command(chr(dec))
+        print(f"Sent: {chr(dec)}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
         time.sleep(4)
