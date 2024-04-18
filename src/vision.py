@@ -54,11 +54,14 @@ class AutoMovements:
             print("Human is to the right of the center, moving right")
             self._motors.right()
 
-    def find_human(self, objs: list[Object]) -> None:
+    def find_human(self, objs: list[Object]) -> bool:
         """Finds the closest human and object in the camera view. Then moves towards the human.
         Args:
             objs (list[Object]): The Bounding Box objects detected in the camera view.
+        Returns:
+            bool: True if human is found/reached, False otherwise.
         """
+        reached: bool = False
         closest_human = detect.get_closest_obj(objs=[obj for obj in objs if obj.id == 0])
         closest_obj = detect.get_closest_obj(objs=objs, min_certainty=None)
 
@@ -67,7 +70,7 @@ class AutoMovements:
             print("No humans detected")
             # Pivot in directions of last seen human position
             self._face_last_human_position()
-            return
+            return reached
 
         # If human is the closest object
         if closest_human == closest_obj:
@@ -76,6 +79,7 @@ class AutoMovements:
             if detect.is_too_close(closest_human):
                 print("Human is too close to the camera")
                 self._motors.stop()
+                reached = True
             # Else human is not too close to the camera
             else:
                 self._follow_human(closest_human)
@@ -93,6 +97,7 @@ class AutoMovements:
         print()
         # Cache last seen human position
         self.last_human_position = self._get_obj_xside(closest_human)
+        return reached
 
 class DroidVision:
     def __init__(self, 
@@ -126,6 +131,7 @@ class DroidVision:
         self._init_model()
         self._init_display()
         self.follow: bool = False
+        self.follow_counter = numpy.uint8(0)
         self.automove = AutoMovements(motor)
 
     def _init_model(self):
@@ -147,6 +153,19 @@ class DroidVision:
         # Average fps over last 30 frames.
         self.fps_counter = common.avg_fps_counter(30)
 
+    def _auto_stop(self, reached_human: bool) -> bool:
+        """Implement a counter to automatically stop following after a certain number of frames of detecting a human.
+        Args:
+            reached_human (bool): True if human is found/reached, False otherwise.
+        Returns:
+            bool: True if the counter reaches the counter's data type limit, False otherwise.
+        """
+        if reached_human and self.follow_counter < numpy.iinfo(self.follow_counter.dtype).max:
+            self.follow_counter += numpy.uint8(1)
+        elif not reached_human and self.follow_counter > numpy.iinfo(self.follow_counter.dtype).min:
+            self.follow_counter -= numpy.uint8(1)
+        return self.follow_counter == numpy.iinfo(self.follow_counter.dtype).max
+
     def _user_callback(self, input_tensor, src_size, inference_box, mot_tracker):
         start_time = time.monotonic()
         common.set_input(self.interpreter, input_tensor)
@@ -154,7 +173,10 @@ class DroidVision:
         objs = detect.get_output(self.interpreter, self.threshold, self.top_k)
         # print(f"Follow state: {self.follow}")
         if self.follow:
-            self.automove.find_human(objs)
+            reached_human = self.automove.find_human(objs)
+            self.follow = not self._auto_stop(reached_human)
+            if not self.follow:
+                print("Auto stopped triggered")
         end_time = time.monotonic()
         # print(f"Detected objects: {objs}")
         detections = numpy.array([(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs])
@@ -187,9 +209,11 @@ class DroidVision:
 
     def set_follow(self, follow: bool):
         self.follow = follow
+        self.follow_counter = numpy.uint8(0)
 
     def toggle_follow(self):
         self.follow ^= True
+        self.follow_counter = numpy.uint8(0)
         if not self.follow:
             self.automove._motors.stop()
 
