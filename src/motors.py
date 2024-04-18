@@ -3,6 +3,7 @@ motors.py
 Motor controller communication via SPI for the R2-ARC project
 '''
 
+import numpy
 import spidev
 import time
 
@@ -21,13 +22,13 @@ class Movements:
         self.spi.open(0, spi_channel)  # Open SPI port 0, chip select (CS) is set by spi_channel
         self.spi.max_speed_hz = speed
         # Store ASCII values for faster communication
-        self._W_ascii = ord('W')
-        self._A_ascii = ord('A')
-        self._S_ascii = ord('S')
-        self._D_ascii = ord('D')
-        self._O_ascii = ord('O')
-        self._P_ascii = ord('P')
-        self._Q_ascii = ord('Q')
+        self._W_ascii = numpy.uint8(87)
+        self._A_ascii = numpy.uint8(65)
+        self._S_ascii = numpy.uint8(83)
+        self._D_ascii = numpy.uint8(68)
+        self._O_ascii = numpy.uint8(79)
+        self._P_ascii = numpy.uint8(80)
+        self._Q_ascii = numpy.uint8(81)
 
     # Below methods implement specific movements by sending single-byte commands
     def forward(self) -> list[int]:
@@ -102,28 +103,20 @@ class Movements:
         """
         return self.spi.xfer([ord(command)])
 
-def test_commands() -> None:
-    """Test sending a series of commands with 2 second delays to the motor controller.
-    args:
-        None
-    returns:
-        None
-    """
+if __name__ == "__main__":
+    # Test the Movements class
     move = Movements()
     commands = {
-        "W": move.forward, 
-        "A": move.left, 
-        "S": move.backwards, 
-        "D": move.right, 
-        "O": move.pivot_left, 
-        "P": move.pivot_right, 
-        "Q": move.stop
+        'W': move.forward, 
+        'A': move.left, 
+        'S': move.backwards, 
+        'D': move.right, 
+        'O': move.pivot_left, 
+        'P': move.pivot_right, 
+        'Q': move.stop
     }
     for key, command in commands.items():
         print(f"Attempting to send command: {key}")
         received = command()
         print(f"Sent: {key}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
         time.sleep(4)
-
-if __name__ == "__main__":
-    test_commands()
