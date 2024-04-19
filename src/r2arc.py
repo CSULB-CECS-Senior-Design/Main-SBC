@@ -17,7 +17,7 @@ class Controls:
     STOP = 'Q'
     FOLLOW = 'F'
     REMOTE = 'R'
-    MOVEMENTS = {
+    MOVEMENTS: set = {
         FORWARD, 
         LEFT, 
         BACKWARD, 
@@ -26,13 +26,13 @@ class Controls:
         PIVOT_RIGHT, 
         STOP
     }
-    STATES = {
+    STATES: set = {
         STOP,
         FOLLOW, 
         REMOTE
     }
-    ALL = STATES.union(MOVEMENTS)
-    prints = {
+    ALL: set = STATES.union(MOVEMENTS)
+    prints: dict = {
         FORWARD: "Moving forward", 
         LEFT: "Moving left", 
         BACKWARD: "Moving backward", 

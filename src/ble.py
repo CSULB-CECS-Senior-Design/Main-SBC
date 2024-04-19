@@ -3,7 +3,7 @@ ble.py
 Bluetooth Low Energy (BLE) service for the R2-ARC project. Uses iOS app to send commands to the main SBC.
 '''
 
-import os, time, pybleno, array, subprocess
+import pybleno, array, subprocess
 
 class RecieveCharactersCharacteristic(pybleno.Characteristic):
     """A custom characteristic for handling write requests through iOS BLE."""
@@ -59,13 +59,6 @@ class R2ARCService:
         self.ready = False
         subprocess.run(['sudo', 'hciconfig', 'hci0', 'reset'], check=True)
         self.ready = True
-
-        # os.system('sudo systemctl stop bluetooth')
-        # self.ready = False
-        # time.sleep(delay)  # Short pause
-        # os.system('sudo systemctl start bluetooth')
-        # time.sleep(delay)  # Wait for Bluetooth service to restart
-        # self.ready = True
 
     def reset_ble_services(self):
         """
