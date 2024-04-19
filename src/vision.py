@@ -30,10 +30,10 @@ class AutoMovements:
     def _face_last_human_position(self):
         """Pivots in the direction of the last seen human position."""
         if self.last_human_position == PositionSide.LEFT:
-            print("Last seen human position was left, pivoting left")
+            # print("Last seen human position was left, pivoting left")
             self._motors.pivot_left()
         else:
-            print("Last seen human position was right, pivoting right")
+            # print("Last seen human position was right, pivoting right")
             self._motors.pivot_right()
 
     def _follow_human(self, human) -> None:
@@ -43,15 +43,15 @@ class AutoMovements:
         """
         # if human is centered in camera view
         if human.bbox.xmin < 0.5 and 0.5 < human.bbox.xmax:
-            print("Human is centered, moving forward")
+            # print("Human is centered, moving forward")
             self._motors.forward()
         # Else if human is on left side of midpoint
         elif human.bbox.xmax < 0.5:
-            print("Human is to the left of the center, moving left")
+            # print("Human is to the left of the center, moving left")
             self._motors.left()
         # Else human is on right side of midpoint
         elif human.bbox.xmin > 0.5:
-            print("Human is to the right of the center, moving right")
+            # print("Human is to the right of the center, moving right")
             self._motors.right()
 
     def find_human(self, objs: list[Object]) -> bool:
@@ -67,17 +67,17 @@ class AutoMovements:
 
         # If no human is detected
         if not closest_human:
-            print("No humans detected")
+            # print("No humans detected")
             # Pivot in directions of last seen human position
             self._face_last_human_position()
             return reached
 
         # If human is the closest object
         if closest_human == closest_obj:
-            print("Closest object is a human")
+            # print("Closest object is a human")
 
             if detect.is_too_close(closest_human):
-                print("Human is too close to the camera")
+                # print("Human is too close to the camera")
                 self._motors.stop()
                 reached = True
             # Else human is not too close to the camera
@@ -85,16 +85,16 @@ class AutoMovements:
                 self._follow_human(closest_human)
         # Else closest object is not a human
         else:
-            print(f"Closest object is not a human. Object ID: {closest_obj.id}")
+            # print(f"Closest object is not a human. Object ID: {closest_obj.id}")
             # print("Avoiding foreign object")
 
             if detect.is_too_close(closest_obj):
-                print("Object is too close to the camera")
+                # print("Object is too close to the camera")
                 self._face_last_human_position()
             else:  # steer into nearest human
                 self._follow_human(closest_human)
 
-        print()
+        # print()
         # Cache last seen human position
         self.last_human_position = self._get_obj_xside(closest_human)
         return reached
@@ -119,7 +119,8 @@ class DroidVision:
             threshold (float, optional): The threshold for detection. Defaults to 0.2.
             videosrc (str, optional): The video source. Defaults to '/dev/video0'.
             videofmt (str, optional): The video format. Defaults to 'raw'. Choices: ['raw', 'h264', 'jpeg']
-            resolution (tuple, optional): The resolution of the camera. Defaults to cameras.get_resolution()."""
+            resolution (tuple, optional): The resolution of the camera. Defaults to cameras.get_resolution().
+        """
         self.model = model
         self.labels = labels
         self.top_k = top_k
@@ -175,8 +176,8 @@ class DroidVision:
         if self.follow:
             reached_human = self.automove.find_human(objs)
             self.follow = not self._auto_stop(reached_human)
-            if not self.follow:
-                print("Auto stopped triggered")
+            # if not self.follow:
+                # print("Auto stopped triggered")
         end_time = time.monotonic()
         # print(f"Detected objects: {objs}")
         detections = numpy.array([(o.bbox.xmin, o.bbox.ymin, o.bbox.xmax, o.bbox.ymax, o.score) for o in objs])
@@ -218,7 +219,7 @@ class DroidVision:
             self.automove._motors.stop()
 
 if __name__ == '__main__':
-    vision = DroidVision(tracker='sort', resolution=cameras.get_razer_kiyo_resolution())
+    vision = DroidVision(tracker='sort')
     # vision = DroidVision()
     vision.toggle_follow()
     vision.start()

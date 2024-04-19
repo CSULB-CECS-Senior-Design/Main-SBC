@@ -1,30 +1,22 @@
-# Edge TPU Object Tracker Example
+# R2-ARC Project
 
-This repo contains a collection of examples that use camera streams
-together with the [TensorFlow Lite API](https://tensorflow.org/lite) with a
-Coral device such as the
-[USB Accelerator](https://coral.withgoogle.com/products/accelerator) or
-[Dev Board](https://coral.withgoogle.com/products/dev-board) and provides an Object tracker for use with the detected objects.
+This repository is dedicated to a project that aims to create a droid similar to R2-D2. The droid is controlled via Bluetooth Low Energy from an iOS device and features autonomous following capabilities. These capabilities are powered by the [TensorFlow Lite API](https://tensorflow.org/lite) in conjunction with a Google Coral device, such as the [M.2 A+E key Accelerator](https://coral.ai/products/m2-accelerator-ae/) and provides an Object tracker for use with the detected objects.
 
 
 ## Installation
 
-1.  First, be sure you have completed the [setup instructions for your Coral
-    device](https://coral.ai/docs/setup/). If it's been a while, repeat to be sure
-    you have the latest software.
+1.  First, be sure you have completed the [setup instructions for your Raspberry Pi 5 with Google Coral Edge TPU](https://gist.github.com/Reddimus/c6948d08a4f4b54ee9d075270bd79c3b). If it's been a while, repeat to be sure you have the latest software.
 
     Importantly, you should have the latest TensorFlow Lite runtime installed
     (as per the [Python quickstart](
-    https://www.tensorflow.org/lite/guide/python)).
+    https://gist.github.com/Reddimus/c6948d08a4f4b54ee9d075270bd79c3b)).
 
 2.  Clone this Git repo onto your computer:
 
     ```
-    mkdir google-coral && cd google-coral
+    mkdir main-sbc && cd main-sbc
 
-    git clone https://github.com/google-coral/example-object-tracker.git
-
-    cd example-object-tracker/
+    git clone https://github.com/CSULB-CECS-Senior-Design/Main-SBC.git
     ```
 
 3.  Download the models:
@@ -36,39 +28,26 @@ Coral device such as the
     These models will be downloaded to a new folder
     ```models```.
 
-
-Further requirements may be needed by the different camera libraries, check the
-README file for the respective subfolder.
-
-## Contents
-
-  * __gstreamer__: Python examples using gstreamer to obtain camera stream. These
-    examples work on Linux using a webcam, Raspberry Pi with
-    the Raspicam, and on the Coral DevBoard using the Coral camera. For the
-    former two, you will also need a Coral USB Accelerator to run the models.
-
-    This demo provides the support of an Object tracker. After following the setup 
-    instructions in README file for the subfolder ```gstreamer```, you can run the tracker demo:
+4. Install the required Python packages:
 
     ```
-    cd gstreamer
-    python3 detect.py --tracker sort
+    bash install_requirements.sh
     ```
 
-## Models
+## Test Object Detection
 
-For the demos in this repository you can change the model and the labels
-file by using the flags flags ```--model``` and
-```--labels```. Be sure to use the models labeled _edgetpu, as those are
-compiled for the accelerator -  otherwise the model will run on the CPU and
-be much slower.
+Now that you have the models and requirements installed:
 
+1. Connect your video source (e.g. a webcam) to your Raspberry Pi 5.
 
-For detection you need to select one of the SSD detection models
-and its corresponding labels file:
+2. Run the object detection script:
 
-```
-mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite, coco_labels.txt
-```
+    ```bash
+    cd src
+    python3 vision.py
+    ```
 
+    This script will open a window showing the video feed with detected objects
+    outlined.
 
+> **Note:** Now that you have setup your Raspberry Pi 5 with Google Coral Edge TPU, you can use the [official Google Coral repository](https://github.com/google-coral/example-object-tracker).
