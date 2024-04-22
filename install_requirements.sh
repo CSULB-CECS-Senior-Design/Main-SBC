@@ -28,8 +28,26 @@ check_and_install() {
             echo "Raspberry Pi detected. Installing Google Coral TPU dependencies."
             echo "Installing wheel and setuptools for Raspberry Pi."
             $py_executable -m pip install wheel==0.42.0 setuptools==58.0.0
+            # sudo apt-get install -y libgirepository1.0-dev libcairo2-dev libdbus-1-dev gobject-introspection gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi gir1.2-gtk-3.0
             $py_executable -m pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
-            $py_executable -m pip install svgwrite RPi.GPIO PyGObject scikit-image pybleno
+            $py_executable -m pip install -r requirements.txt
+
+            # Install Tracker Dependencies
+            echo
+            echo "Installing tracker dependencies."
+            echo
+            echo "Note that the trackers have their own licensing, many of which
+            are not Apache. Care should be taken if using a tracker with restrictive
+            licenses for end applications."
+
+            read -p "Install SORT (GPLv3)? " -n 1 -r
+            if [[ $REPLY =~ ^[Yy]$ ]]
+            then
+                wget https://github.com/abewley/sort/archive/master.zip -O sort.zip
+                unzip sort.zip -d ./third_party
+                rm sort.zip
+            fi
+            echo
         fi
     else
         echo "Version of $py_executable ($version) is outside the range. Skipping."
@@ -39,23 +57,6 @@ check_and_install() {
 # Attempt to use python3 as the primary executable
 if command -v python3 &>/dev/null; then
     check_and_install python3
-    # Install Tracker Dependencies
-    echo
-    echo "Installing tracker dependencies."
-    echo
-    echo "Note that the trackers have their own licensing, many of which
-    are not Apache. Care should be taken if using a tracker with restrictive
-    licenses for end applications."
-
-    read -p "Install SORT (GPLv3)? " -n 1 -r
-    if [[ $REPLY =~ ^[Yy]$ ]]
-    then
-        wget https://github.com/abewley/sort/archive/master.zip -O sort.zip
-        unzip sort.zip -d ./third_party
-        rm sort.zip
-        python3 -m pip install -r requirements_for_r2arc_with_sort.txt
-    fi
-    echo
 else
     echo "Python3 command is not available."
 fi
