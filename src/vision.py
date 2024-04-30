@@ -8,6 +8,40 @@ import motors
 from gstreamer import *
 from gstreamer import Object as Object
 
+class InfraRedSensors:
+    def __init__(self) -> None:
+        self.MAX_DISTANCE = numpy.uint8(80)
+        self.MIN_DISTANCE = numpy.uint8(5)
+        self.TOO_CLOSE_DISTANCE = numpy.uint8(40)
+        self.front_distance = self.MAX_DISTANCE
+        self.back_distance = self.MAX_DISTANCE
+    
+    def get_front_distance(self) -> numpy.uint8:
+        return self.front_distance
+    
+    def get_back_distance(self) -> numpy.uint8:
+        return self.back_distance
+
+    def is_front_too_close(self) -> bool:
+        return self.front_distance < self.TOO_CLOSE_DISTANCE
+    
+    def is_back_too_close(self) -> bool:
+        return self.back_distance < self.TOO_CLOSE_DISTANCE
+    
+    def decode_recieved_data(self, data) -> str:
+        """
+        Splits an unsigned 8 bit integer into two unsigned "4 bit" integers.
+        """
+        msbs = numpy.uint8(data >> 4)
+        lsbs = numpy.uint8(data & 0x0F)
+        return (msbs, lsbs)
+    
+    def update_distances(self, data) -> None:
+        """
+        Updates the front and back distance values.
+        """
+        self.front_distance, self.back_distance = self.decode_recieved_data(data)
+
 class PositionSide:
     LEFT = False
     RIGHT = True
@@ -16,6 +50,7 @@ class AutoMovements:
     def __init__(self, motor: motors.Movements):
         self.last_human_position = PositionSide.LEFT    # Default
         self._motors = motor
+        self._ir_sensors = InfraRedSensors()
 
     def _get_obj_xside(self, obj: Object) -> PositionSide:
         """Returns the position side of the object in the camera view.
@@ -31,10 +66,12 @@ class AutoMovements:
         """Pivots in the direction of the last seen human position."""
         if self.last_human_position == PositionSide.LEFT:
             # print("Last seen human position was left, pivoting left")
-            self._motors.pivot_left()
+            recieved_data = recieved_data = self._motors.pivot_left()
         else:
             # print("Last seen human position was right, pivoting right")
-            self._motors.pivot_right()
+            recieved_data = self._motors.pivot_right()
+        
+        self._ir_sensors.update_distances(recieved_data)
 
     def _follow_human(self, human) -> None:
         """Follows the given human in the camera view.
@@ -44,15 +81,17 @@ class AutoMovements:
         # if human is centered in camera view
         if human.bbox.xmin < 0.5 and 0.5 < human.bbox.xmax:
             # print("Human is centered, moving forward")
-            self._motors.forward()
+            recieved_data = self._motors.forward()
         # Else if human is on left side of midpoint
         elif human.bbox.xmax < 0.5:
             # print("Human is to the left of the center, moving left")
-            self._motors.left()
+            recieved_data = self._motors.left()
         # Else human is on right side of midpoint
-        elif human.bbox.xmin > 0.5:
+        else:
             # print("Human is to the right of the center, moving right")
-            self._motors.right()
+            recieved_data = self._motors.right()
+
+        self._ir_sensors.update_distances(recieved_data)
 
     def find_human(self, objs: list[Object]) -> bool:
         """Finds the closest human and object in the camera view. Then moves towards the human.
@@ -76,9 +115,10 @@ class AutoMovements:
         if closest_human == closest_obj:
             # print("Closest object is a human")
 
-            if detect.is_too_close(closest_human):
+            if detect.is_too_close(closest_human) or self._ir_sensors.is_front_too_close():
                 # print("Human is too close to the camera")
-                self._motors.stop()
+                recieved_data = self._motors.stop()
+                self._ir_sensors.update_distances(recieved_data)
                 reached = True
             # Else human is not too close to the camera
             else:
@@ -88,8 +128,12 @@ class AutoMovements:
             # print(f"Closest object is not a human. Object ID: {closest_obj.id}")
             # print("Avoiding foreign object")
 
-            if detect.is_too_close(closest_obj):
+            if detect.is_too_close(closest_obj) or self._ir_sensors.is_front_too_close():
                 # print("Object is too close to the camera")
+                if not self._ir_sensors.is_back_too_close():
+                    # print("Backing up")
+                    recieved_data = self._motors.backward()
+                    self._ir_sensors.update_distances(recieved_data)
                 self._face_last_human_position()
             else:  # steer into nearest human
                 self._follow_human(closest_human)
@@ -101,7 +145,7 @@ class AutoMovements:
 
 class DroidVision:
     def __init__(self, 
-                 motor: motors.Movements = motors.Movements(), 
+                 motor: motors.Movements, 
                  model: str = "../models/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", 
                  labels: str = "../models/coco_labels.txt", 
                  top_k = numpy.uint8(20), 
@@ -219,7 +263,16 @@ class DroidVision:
             self.automove._motors.stop()
 
 if __name__ == '__main__':
-    vision = DroidVision(tracker='sort')
-    # vision = DroidVision()
+    # Test the DroidVision class
+    import spidev
+    # Setup spi communication
+    spi = spidev.SpiDev()
+    spi.open(bus=0, device=0)
+    spi.max_speed_hz = 5_000_000
+    # Setup motor controller communication
+    r2motor = motors.Movements(spi)
+    # Setup DroidVision
+    vision = DroidVision(tracker='sort', motor=r2motor)
+    # vision = DroidVision(motor=r2motor)
     vision.toggle_follow()
     vision.start()
