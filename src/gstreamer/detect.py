@@ -129,7 +129,7 @@ def get_closest_obj(objs: list[Object], min_certainty = np.float16(0.5)) -> Obje
                           )
     return closest
 
-def is_too_close(obj: Object, xthreshold = np.float16(0.2), ythreshold = np.float16(0.3)) -> bool:
+def is_too_close(obj: Object, xthreshold = np.float16(0.25)) -> bool: # ythreshold = np.float16(0.3)) -> bool:
     """Checks if the given object is too close to the camera.
     Args:
         obj (BBox Object): The object detected in the camera view.
@@ -137,6 +137,8 @@ def is_too_close(obj: Object, xthreshold = np.float16(0.2), ythreshold = np.floa
     Returns:
         bool: True if object is too close to the camera, False otherwise.
     """
-    x_too_close = obj.bbox.xmin < xthreshold and 1 - xthreshold < obj.bbox.xmax
-    y_too_close = obj.bbox.ymin < ythreshold and 1 - ythreshold < obj.bbox.ymax
-    return x_too_close or y_too_close
+    # x_too_close = obj.bbox.xmin < xthreshold and 1 - xthreshold < obj.bbox.xmax
+    # y_too_close = obj.bbox.ymin < ythreshold and 1 - ythreshold < obj.bbox.ymax
+    # return x_too_close or y_too_close
+    
+    return obj.bbox.xmin < xthreshold and 1 - xthreshold < obj.bbox.xmax
