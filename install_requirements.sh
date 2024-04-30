@@ -32,6 +32,12 @@ check_and_install() {
             $py_executable -m pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
             $py_executable -m pip install -r requirements.txt
 
+            # Add v4l2 video module to kernel
+            if ! grep -q "bcm2835-v4l2" /etc/modules; then
+                echo bcm2835-v4l2 | sudo tee -a /etc/modules
+            fi
+            sudo modprobe bcm2835-v4l2
+
             # Install Tracker Dependencies
             echo
             echo "Installing tracker dependencies."
