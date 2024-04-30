@@ -6,19 +6,12 @@ Motor controller communication via SPI for the R2-ARC project
 import spidev
 
 class Movements:
-    def __init__(self, spi_channel: int = 0, speed: int = 5000000) -> None:
-        """Initializes the Movements class with the specified SPI channel and speed to communicate with the motor controller.
+    def __init__(self, spi: spidev.SpiDev) -> None:
+        """Initializes the Movements class with the specified SPI object.
         args:
-            spi_channel (int): SPI channel (bus) to use. Default is 0.
-            speed (int): SPI communication speed in Hz. Default is 5 MHz (5,000,000 Hz).
-        returns:
-            None
+            spi (spidev.SpiDev): The SPI object to use for communication with the motor controller.
         """
-        self.spi_channel = spi_channel
-        self.speed = speed
-        self.spi = spidev.SpiDev()
-        self.spi.open(0, spi_channel)  # Open SPI port 0, chip select (CS) is set by spi_channel
-        self.spi.max_speed_hz = speed
+        self.spi = spi
         # Store ASCII values for faster communication
         self._W_ASCII = ord('W')
         self._A_ASCII = ord('A')
@@ -104,7 +97,10 @@ class Movements:
 if __name__ == "__main__":
     import time
     # Test the Movements class
-    move = Movements()
+    spi = spidev.SpiDev()
+    spi.open(bus=0, device=0)
+    spi.max_speed_hz = 5_000_000
+    move = Movements(spi)
     commands = {
         'W': move.forward, 
         'A': move.left, 

@@ -4,7 +4,7 @@ Main program for the R2ARC project
 '''
 
 import vision, motors, ble
-import enum, threading
+import enum, threading, spidev
 from gstreamer import cameras
 
 class Controls:
@@ -55,8 +55,12 @@ class State(enum.Enum):
     REMOTE = 2
 
 if __name__ == '__main__':
+    # Setup spi communication
+    spi = spidev.SpiDev()
+    spi.open(bus=0, device=0)
+    spi.max_speed_hz = 5_000_000
     # Setup motor controller communication
-    r2motor = motors.Movements()
+    r2motor = motors.Movements(spi)
     # Setup Machine Vision
     r2vision = vision.DroidVision(resolution=cameras.get_razer_kiyo_resolution(), motor=r2motor)
     r2vision_thread = threading.Thread(target=r2vision.start)
