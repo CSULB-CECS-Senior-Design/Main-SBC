@@ -27,7 +27,7 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """ 
         return self.spi.xfer([self._W_ASCII])
 
@@ -36,16 +36,16 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._A_ASCII])
 
-    def backwards(self) -> list[int]:
+    def backward(self) -> list[int]:
         """"Sends the character 'S' to the motor controller via SPI to move the R2-ARC droid backwards.
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._S_ASCII])
 
@@ -54,7 +54,7 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._D_ASCII])
 
@@ -63,7 +63,7 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._O_ASCII])
 
@@ -72,7 +72,7 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._P_ASCII])
 
@@ -81,7 +81,7 @@ class Movements:
         args:
             None
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([self._Q_ASCII])
     
@@ -90,7 +90,7 @@ class Movements:
         args:
             command (str): The command to send to the motor controller.
         returns:
-            list[int]: List containing the received byte from the motor controller.
+            list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
         return self.spi.xfer([ord(command)])
 
