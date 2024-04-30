@@ -32,8 +32,14 @@ class InfraRedSensors:
         """
         Splits an unsigned 8 bit integer into two unsigned "4 bit" integers.
         """
-        msbs = numpy.uint8(data >> 4)
-        lsbs = numpy.uint8(data & 0x0F)
+        msbs = self.MAX_DISTANCE
+        lsbs = self.MAX_DISTANCE
+        try:
+            msbs = numpy.uint8(data >> 4)
+            lsbs = numpy.uint8(data & 0x0F)
+        except Exception as e:
+            # print(f"Error decoding data: {e}")
+            pass
         return (msbs, lsbs)
     
     def update_distances(self, data) -> None:
