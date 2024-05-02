@@ -20,6 +20,7 @@ class Movements:
         self._O_ASCII = ord('O')
         self._P_ASCII = ord('P')
         self._Q_ASCII = ord('Q')
+        self._EMPTY_BYTE = 0x00
 
     # Below methods implement specific movements by sending single-byte commands
     def forward(self) -> list[int]:
@@ -29,7 +30,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """ 
-        return self.spi.xfer([self._W_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._W_ASCII])
 
     def left(self) -> list[int]:
         """"Sends the character 'A' to the motor controller via SPI to move the R2-ARC droid left.
@@ -38,7 +39,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._A_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._A_ASCII])
 
     def backward(self) -> list[int]:
         """"Sends the character 'S' to the motor controller via SPI to move the R2-ARC droid backwards.
@@ -47,7 +48,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._S_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._S_ASCII])
 
     def right(self) -> list[int]:
         """"Sends the character 'D' to the motor controller via SPI to move the R2-ARC droid right.
@@ -56,7 +57,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._D_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._D_ASCII])
 
     def pivot_left(self) -> list[int]:
         """"Sends the character 'O' to the motor controller via SPI to pivot the R2-ARC droid left in place.
@@ -65,7 +66,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._O_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._O_ASCII])
 
     def pivot_right(self) -> list[int]:
         """"Sends the character 'P' to the motor controller via SPI to pivot the R2-ARC droid right in place.
@@ -74,7 +75,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._P_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._P_ASCII])
 
     def stop(self) -> list[int]:
         """"Sends the character 'Q' to the motor controller via SPI to stop the R2-ARC droid.
@@ -83,7 +84,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([self._Q_ASCII])
+        return self.spi.xfer([self._EMPTY_BYTE, self._Q_ASCII])
     
     def send_command(self, command: str) -> list[int]:
         """Sends the specified command to the motor controller.
@@ -92,7 +93,7 @@ class Movements:
         returns:
             list[int]: List containing the the relayed InfraRed sensor encoded 16-bit data.
         """
-        return self.spi.xfer([ord(command)])
+        return self.spi.xfer([self._EMPTY_BYTE, ord(command)])
 
 if __name__ == "__main__":
     import time
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     commands = {
         'W': move.forward, 
         'A': move.left, 
-        'S': move.backwards, 
+        'S': move.backward, 
         'D': move.right, 
         'O': move.pivot_left, 
         'P': move.pivot_right, 
@@ -113,11 +114,11 @@ if __name__ == "__main__":
     for key, command in commands.items():
         print(f"Attempting to send command: {key}")
         received = command()
-        print(f"Sent: {key}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
-        time.sleep(4)
+        print(f"Sent: {key}, Received Data: {received}")
+        time.sleep(1)
 
-    for dec in range(256):
-        print(f"Attempting to send command: {chr(dec)}")
-        received = move.send_command(chr(dec))
-        print(f"Sent: {chr(dec)}, Received Data: 0x{received[0]:02x}, {chr(received[0])}")
-        time.sleep(4)
+    for num in range(256):
+        print(f"Attempting to send command: {chr(num)}")
+        received = move.send_command(chr(num))
+        print(f"Sent: {chr(num)}, Received Data: {received}")
+        time.sleep(1)
